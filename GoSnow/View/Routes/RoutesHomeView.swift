@@ -14,6 +14,7 @@ struct RoutesHomeView: View {
     @State private var sortOption: RoutesSortOption = .latest
     @State private var resorts: [ResortOption] = []
     @State private var selectedResortId: Int? = nil
+    @State private var showComposer = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -62,6 +63,23 @@ struct RoutesHomeView: View {
         }
         .navigationTitle("路线分享")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showComposer = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showComposer) {
+            NavigationStack {
+                RouteComposerView(onPublished: {
+                    showComposer = false
+                    Task { await loadRoutes() }
+                })
+            }
+        }
         .task {
             await loadResorts()
             await loadRoutes()

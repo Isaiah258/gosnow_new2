@@ -380,6 +380,12 @@ struct RecordingView: View {
 
                             // ✅ 2) 判断是否“有轨迹可生成”
                             let segs = track.snapshotSegments()
+                            let allCoords = track.snapshotAllCoords()
+                            if !allCoords.isEmpty {
+                                Task.detached(priority: .utility) {
+                                    try? JSONLocalStore().saveRouteTrack(coords: allCoords, sessionId: session.id)
+                                }
+                            }
 
                             // 没轨迹：总结页应显示“暂无轨迹”，不要转圈
                             guard !segs.isEmpty else {

@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Xcode user state (千万别提交)
+*.xcuserstate
+**/*.xcuserstate
+
+# Xcode user data
+xcuserdata/
+*.xcuserdata/
+**/*.xcuserdata/
+
+# Build / DerivedData
+DerivedData/
+.build/
+
+# SwiftPM
+.swiftpm/
+Package.resolved
+
+# XCWorkspace user data
+**/*.xcworkspace/xcuserdata/
+
+# Temporary / uploading configs (你截图里那种)
+*.uploading.cfg
+

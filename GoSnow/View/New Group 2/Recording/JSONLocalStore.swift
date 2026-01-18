@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import CoreLocation
 
 final class JSONLocalStore: LocalStore {
     private let fm = FileManager.default
@@ -131,3 +132,27 @@ extension JSONLocalStore {
     }
 }
 
+extension JSONLocalStore {
+
+    private var routeTrackDirURL: URL {
+        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("route_tracks", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    private func routeTrackURL(sessionId: UUID) -> URL {
+        routeTrackDirURL.appendingPathComponent("\(sessionId.uuidString).json")
+    }
+
+    func saveRouteTrack(coords: [CLLocationCoordinate2D], sessionId: UUID) throws {
+        let payload = coords.map { [$0.longitude, $0.latitude] }
+        let data = try JSONEncoder().encode(payload)
+        try data.write(to: routeTrackURL(sessionId: sessionId), options: .atomic)
+    }
+
+    func loadRouteTrack(sessionId: UUID) -> Data? {
+        let url = routeTrackURL(sessionId: sessionId)
+        return try? Data(contentsOf: url)
+    }
+}

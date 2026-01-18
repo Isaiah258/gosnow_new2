@@ -30,6 +30,15 @@ struct DailySnowView: View {
                             ResortsView()
                         }
 
+                        CardLink(
+                            title: "路线分享",
+                            subtitle: "发现滑行路线，开始跟随",
+                            icon: "point.topleft.down.curvedto.point.bottomright.up",
+                            tint: .blue
+                        ) {
+                            RoutesHomeView()
+                        }
+
                         // 失物招领
                         CardLink(
                             title: "失物招领",

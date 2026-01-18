@@ -51,6 +51,10 @@ struct RecordingView: View {
     // ✅ 轨迹控制器
     @StateObject private var track = LiveTrackController()
     @State private var trackEnabled: Bool = true
+
+    // ✅ 跟随路线 overlay
+    @StateObject private var activeRouteOverlay = RouteLineOverlayController()
+    @AppStorage("activeRouteId") private var activeRouteId: String = ""
     
     // ✅ 小队 controller
     @StateObject private var party = PartyRideController()
@@ -98,6 +102,9 @@ struct RecordingView: View {
             ensureMapAuthorization()
             track.isEnabled = trackEnabled
         }
+        .task(id: activeRouteId) {
+            await loadActiveRouteOverlay()
+        }
         // ✅ 有新坐标就追加到轨迹
         .onChange(of: vm.currentCoordinate) { _, c in
             guard let c else { return }
@@ -137,12 +144,13 @@ struct RecordingView: View {
     // MARK: - Map
 
     private var MapBlock: some View {
-        MapViewRepresentable(style: mapStyle) { map in
+            MapViewRepresentable(style: mapStyle) { map in
             DispatchQueue.main.async {
                 self.mapView = map
                 configureInitialCameraIfNeeded()
                 track.attach(to: map) // ✅ 内部会等 styleLoaded 再装 layer
                 party.attach(to: map)
+                activeRouteOverlay.attach(to: map)
             }
         }
         .ignoresSafeArea()
@@ -362,6 +370,7 @@ struct RecordingView: View {
                             isEnding = true
                             weakMap?.isUserInteractionEnabled = false
                             showMap = false
+                            clearActiveRoute()
                         },
                         onSummary: { summary, session in
                             // ✅ 1) 先立刻打开总结页
@@ -447,6 +456,45 @@ struct RecordingView: View {
         default:
             break
         }
+    }
+
+    @MainActor
+    private func loadActiveRouteOverlay() async {
+        guard !activeRouteId.isEmpty else {
+            activeRouteOverlay.clear()
+            return
+        }
+        guard let routeUUID = UUID(uuidString: activeRouteId) else {
+            activeRouteOverlay.clear()
+            return
+        }
+
+        if let cached = RouteTrackCache.load(routeId: routeUUID) {
+            if let coords = try? RoutesAPI.shared.decodeTrackCoordinates(from: cached) {
+                activeRouteOverlay.render(coords)
+                return
+            }
+        }
+
+        do {
+            guard let detail = try await RoutesAPI.shared.fetchRouteDetail(routeId: routeUUID) else {
+                return
+            }
+            guard let url = detail.trackFileUrl else {
+                return
+            }
+            let data = try await RoutesAPI.shared.downloadTrackData(trackFileUrl: url)
+            RouteTrackCache.save(data, routeId: routeUUID)
+            let coords = try RoutesAPI.shared.decodeTrackCoordinates(from: data)
+            activeRouteOverlay.render(coords)
+        } catch {
+            print("❌ loadActiveRouteOverlay failed:", error)
+        }
+    }
+
+    private func clearActiveRoute() {
+        activeRouteId = ""
+        activeRouteOverlay.clear()
     }
     
     private func cameraOptionsToFit(coords: [CLLocationCoordinate2D], padding: CGFloat) -> CameraOptions {
